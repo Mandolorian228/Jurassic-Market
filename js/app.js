@@ -311,7 +311,11 @@ function syncTutorialUi() {
   const menuBtn = $('#back-to-menu-btn');
   const hintPanel = $('#tutorial-hint-panel');
   if (exitBtn) exitBtn.hidden = !isTut;
-  if (menuBtn) menuBtn.hidden = !(state.user && !isTut && state.mode === 'offline');
+  // Офлайн (с аккаунтом) и онлайн — «В меню» (шапка + боковая панель)
+  const showMenu = !isTut && (state.mode === 'online' || (state.mode === 'offline' && state.user));
+  if (menuBtn) menuBtn.hidden = !showMenu;
+  const headerMenuBtn = $('#back-to-menu-header-btn');
+  if (headerMenuBtn) headerMenuBtn.hidden = !showMenu;
   if (!hintPanel) return;
   if (!isTut) {
     hintPanel.hidden = true;
@@ -350,6 +354,15 @@ function exitTutorial() {
 async function backToMainMenuFromGame() {
   if (state.mode === 'online') {
     if (!confirm('Покинуть партию и вернуться в меню?')) return;
+    const roomId = state.room?.id || state.game?.roomId;
+    const userId = state.user?.id;
+    try {
+      if (roomId && userId && window.JMNet?.leaveRoom) {
+        await window.JMNet.leaveRoom(roomId, userId);
+      }
+    } catch (ex) {
+      console.warn('[JM] leaveRoom from game', ex);
+    }
     teardownNet();
     state.game = null;
     state.room = null;
@@ -1279,6 +1292,7 @@ function renderBattlePanel() {
   hideBattleActionRows();
 
   if (!battle) {
+    hideBattleChallengeModal();
     active.hidden = true;
     proposeRow.hidden = finished;
     targetField.hidden = finished;
@@ -1299,25 +1313,27 @@ function renderBattlePanel() {
 
   if (battle.status === 'awaiting_accept') {
     statusText.innerHTML = `<strong>${proposer.name}</strong> вызывает <strong>${partner.name}</strong> на бой.`;
+    syncBattleChallengeModal(battle, { amPartner, proposer });
     if (amProposer) {
       $('#battle-cancel-row').hidden = false;
       setBattleWaitHint(
         state.mode !== 'online'
-          ? `Ожидание ${partner.name}. Кликните его имя слева → «Принять бой».`
+          ? `Ожидание ответа ${partner.name}…`
           : `Ожидание ответа от ${partner.name}…`
       );
     } else if (amPartner) {
+      // Кнопки в панели дублируют модалку (на случай закрытия)
       $('#battle-accept-row').hidden = false;
-      setBattleWaitHint('Примите или отклоните вызов — затем выберите динозавра.');
+      setBattleWaitHint('Примите или отклоните вызов в окне — затем выберите динозавра.');
     } else if (state.mode !== 'online') {
-      setBattleWaitHint(
-        `${proposer.name} вызвал ${partner.name}. Кликните имя нужного игрока слева.`
-      );
+      setBattleWaitHint(`${proposer.name} вызвал ${partner.name}.`);
     } else {
       setBattleWaitHint('Вы не участник этого вызова.');
     }
     return;
   }
+
+  hideBattleChallengeModal();
 
   if (battle.status === 'pick_dinos') {
     // Очередь выбора: сначала вызвавший, потом принявший
@@ -2076,6 +2092,8 @@ function bindEvents() {
   $('#battle-propose-btn')?.addEventListener('click', onBattlePropose);
   $('#battle-accept-btn')?.addEventListener('click', onBattleAccept);
   $('#battle-decline-btn')?.addEventListener('click', onBattleDecline);
+  $('#battle-challenge-accept')?.addEventListener('click', onBattleChallengeAccept);
+  $('#battle-challenge-decline')?.addEventListener('click', onBattleChallengeDecline);
   $('#battle-cancel-btn')?.addEventListener('click', onBattleCancel);
   $('#battle-pick-btn')?.addEventListener('click', onBattlePick);
   $('#battle-attack-btn')?.addEventListener('click', () => onBattleChoice('attack'));
@@ -2105,6 +2123,7 @@ function bindEvents() {
   $('#join-modal-cancel')?.addEventListener('click', hideJoinModal);
   $('#exit-tutorial-btn')?.addEventListener('click', exitTutorial);
   $('#back-to-menu-btn')?.addEventListener('click', () => backToMainMenuFromGame());
+  $('#back-to-menu-header-btn')?.addEventListener('click', () => backToMainMenuFromGame());
   $('#tutorial-hint-next')?.addEventListener('click', advanceTutorialHint);
   $('#lobby-back-menu-btn')?.addEventListener('click', onLeaveRoom);
   $('#auth-form')?.addEventListener('submit', onAuthSignIn);
@@ -2644,17 +2663,79 @@ function onBattlePropose() {
   afterGameAction();
 }
 
+function syncBattleChallengeModal(battle, { amPartner, proposer }) {
+  const modal = $('#battle-challenge-modal');
+  if (!modal || !battle || battle.status !== 'awaiting_accept') {
+    hideBattleChallengeModal();
+    return;
+  }
+
+  // Онлайн: только у вызванного. Офлайн (один экран): сразу у всех — кнопки от имени вызванного.
+  if (state.mode === 'online' && !amPartner) {
+    hideBattleChallengeModal();
+    return;
+  }
+
+  const text = $('#battle-challenge-text');
+  if (text) {
+    text.innerHTML = `<strong style="color:${proposer.color || 'inherit'}">${proposer.name}</strong> вызывает вас на бой!`;
+  }
+  modal.hidden = false;
+  document.body.classList.add('battle-challenge-open');
+}
+
+function hideBattleChallengeModal() {
+  const modal = $('#battle-challenge-modal');
+  if (!modal || modal.hidden) {
+    document.body.classList.remove('battle-challenge-open');
+    return;
+  }
+  modal.hidden = true;
+  document.body.classList.remove('battle-challenge-open');
+}
+
+function onBattleChallengeAccept() {
+  const battle = state.game?.pendingBattle;
+  if (!battle || battle.status !== 'awaiting_accept') return;
+  hideBattleChallengeModal();
+  if (state.mode !== 'online') {
+    const partner = state.game.players[battle.partnerIndex];
+    setCurrentPlayerIndex(state.game, battle.partnerIndex);
+    acceptBattle(state.game, { actorPlayerId: partner?.id });
+  } else {
+    acceptBattle(state.game, battleActorOpts());
+  }
+  afterGameAction();
+}
+
+function onBattleChallengeDecline() {
+  const battle = state.game?.pendingBattle;
+  if (!battle || battle.status !== 'awaiting_accept') return;
+  hideBattleChallengeModal();
+  if (state.mode !== 'online') {
+    const partner = state.game.players[battle.partnerIndex];
+    setCurrentPlayerIndex(state.game, battle.partnerIndex);
+    declineBattle(state.game, { actorPlayerId: partner?.id });
+  } else {
+    declineBattle(state.game, battleActorOpts());
+  }
+  afterGameAction();
+}
+
 function onBattleAccept() {
+  hideBattleChallengeModal();
   acceptBattle(state.game, battleActorOpts());
   afterGameAction();
 }
 
 function onBattleDecline() {
+  hideBattleChallengeModal();
   declineBattle(state.game, battleActorOpts());
   afterGameAction();
 }
 
 function onBattleCancel() {
+  hideBattleChallengeModal();
   cancelBattle(state.game, battleActorOpts());
   afterGameAction();
 }
@@ -2915,13 +2996,17 @@ function renderLobbyRoom() {
   $('#lobby-invite-url').value = window.JMNet.inviteUrl(state.room.code);
 
   const list = $('#lobby-players');
+  const seatColor = window.JMNet?.colorForSeat;
   list.innerHTML = state.roomPlayers
-    .map(
-      (p) =>
-        `<li><span class="player__token" style="background:${p.avatar_color}"></span>${p.display_name}${
-          p.user_id === state.room.host_id ? ' · хост' : ''
-        }</li>`
-    )
+    .map((p) => {
+      const color =
+        (typeof seatColor === 'function' ? seatColor(p.seat) : null) ||
+        p.avatar_color ||
+        '#e63946';
+      return `<li><span class="player__token" style="background:${color}"></span>${p.display_name}${
+        p.user_id === state.room.host_id ? ' · хост' : ''
+      }</li>`;
+    })
     .join('');
 
   const isHost = state.user && state.room.host_id === state.user.id;
@@ -3084,6 +3169,7 @@ async function beginOnlineGame(game) {
   renderLocationTabs();
   renderAll();
   syncDevPanel();
+  syncTutorialUi();
   maybeShowIntroBeforeFirstRoll();
 }
 

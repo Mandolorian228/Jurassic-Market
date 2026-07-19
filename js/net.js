@@ -31,6 +31,14 @@
     return new URLSearchParams(window.location.search).get('room');
   }
 
+  /** Уникальный цвет по месту в комнате (seat 0, 1, 2…) — без совпадений у разных игроков. */
+  function colorForSeat(seat) {
+    const colors = PLAYER_COLORS || [];
+    if (!colors.length) return '#e63946';
+    const i = Math.max(0, Math.floor(Number(seat) || 0));
+    return colors[i % colors.length];
+  }
+
   async function createRoom(hostUser, hostProfile) {
     const client = sb();
     if (!client) throw new Error('Онлайн не настроен');
@@ -53,7 +61,7 @@
       user_id: hostUser.id,
       seat: 0,
       display_name: hostProfile?.display_name || hostUser.email,
-      avatar_color: hostProfile?.avatar_color || PLAYER_COLORS[0],
+      avatar_color: colorForSeat(0),
     });
     if (joinErr) throw joinErr;
 
@@ -110,7 +118,7 @@
       user_id: user.id,
       seat,
       display_name: profile?.display_name || user.email,
-      avatar_color: profile?.avatar_color || PLAYER_COLORS[seat % PLAYER_COLORS.length],
+      avatar_color: colorForSeat(seat),
     });
     if (error) throw error;
 
@@ -131,16 +139,19 @@
   }
 
   function playersFromRoomSeats(roomPlayers) {
-    return roomPlayers.map((rp, i) => ({
-      id: i,
-      userId: rp.user_id,
-      name: rp.display_name || `Игрок ${i + 1}`,
-      color: rp.avatar_color || PLAYER_COLORS[i % PLAYER_COLORS.length],
-      money: START_MONEY,
-      position: 0,
-      inJail: false,
-      eventShield: false,
-    }));
+    return roomPlayers.map((rp, i) => {
+      const seat = rp.seat != null ? Number(rp.seat) : i;
+      return {
+        id: i,
+        userId: rp.user_id,
+        name: rp.display_name || `Игрок ${i + 1}`,
+        color: colorForSeat(seat),
+        money: START_MONEY,
+        position: 0,
+        inJail: false,
+        eventShield: false,
+      };
+    });
   }
 
   async function startGame(room, roomPlayers, locations) {
@@ -274,6 +285,7 @@
     makeRoomCode,
     inviteUrl,
     parseRoomCodeFromUrl,
+    colorForSeat,
     createRoom,
     getRoomByCode,
     listRoomPlayers,

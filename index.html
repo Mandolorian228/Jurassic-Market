@@ -122,6 +122,9 @@
       </div>
       <div class="header__actions">
         <nav class="location-tabs" id="location-tabs" aria-label="Локации"></nav>
+        <button class="btn btn--secondary header__menu-btn" id="back-to-menu-header-btn" type="button" hidden>
+          В меню
+        </button>
         <button class="btn btn--dev" id="dev-toggle" type="button" title="Ctrl+Shift+D">Dev</button>
       </div>
     </header>
@@ -491,6 +494,27 @@
       <h2 class="purchase-modal__title" id="purchase-modal-title">Динозавр</h2>
       <ul class="purchase-modal__stats" id="purchase-modal-stats"></ul>
       <button class="btn btn--primary purchase-modal__ok" id="purchase-modal-ok" type="button">Отлично</button>
+    </div>
+  </div>
+
+  <div class="battle-challenge-modal" id="battle-challenge-modal" hidden role="dialog" aria-modal="true" aria-labelledby="battle-challenge-title">
+    <div class="battle-challenge-modal__backdrop" aria-hidden="true"></div>
+    <div class="battle-challenge-modal__dialog">
+      <p class="battle-challenge-modal__eyebrow">Вызов на бой</p>
+      <h2 class="battle-challenge-modal__title" id="battle-challenge-title">Вас вызывают!</h2>
+      <p class="battle-challenge-modal__text" id="battle-challenge-text"></p>
+      <div class="battle-challenge-modal__art">
+        <img
+          src="img/battle-challenge.png"
+          alt="Бой динозавров"
+          width="640"
+          height="360"
+        />
+      </div>
+      <div class="battle-challenge-modal__actions">
+        <button class="btn btn--primary" id="battle-challenge-accept" type="button">Принять</button>
+        <button class="btn btn--secondary" id="battle-challenge-decline" type="button">Отклонить</button>
+      </div>
     </div>
   </div>
 
