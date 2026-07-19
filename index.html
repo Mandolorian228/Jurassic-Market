@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jurassic Market — Игровое поле</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/board.css">
+</head>
+<body>
+  <!-- Auth -->
+  <div class="gate" id="auth-gate" hidden>
+    <div class="gate__card">
+      <h1 class="gate__title">Jurassic Market</h1>
+      <p class="gate__subtitle">Регистрация и вход для игры с друзьями</p>
+      <p class="gate__mode" id="auth-mode-hint"></p>
+      <form class="gate__form" id="auth-form">
+        <label class="gate__field">
+          <span>Имя</span>
+          <input type="text" id="auth-name" autocomplete="nickname" placeholder="Как вас зовут" />
+        </label>
+        <label class="gate__field">
+          <span>Email</span>
+          <input type="email" id="auth-email" required autocomplete="email" />
+        </label>
+        <label class="gate__field">
+          <span>Пароль</span>
+          <input type="password" id="auth-password" required minlength="6" autocomplete="current-password" />
+        </label>
+        <p class="gate__error" id="auth-error" hidden></p>
+        <div class="gate__actions">
+          <button class="btn btn--primary" type="submit" id="auth-signin-btn">Войти</button>
+          <button class="btn btn--secondary" type="button" id="auth-signup-btn">Регистрация</button>
+        </div>
+      </form>
+      <button class="btn btn--secondary gate__offline" type="button" id="play-offline-btn">
+        Играть офлайн (hot-seat)
+      </button>
+    </div>
+  </div>
+
+  <!-- Main menu (после входа) -->
+  <div class="gate" id="main-menu-gate" hidden>
+    <div class="gate__card menu-card">
+      <h1 class="gate__title">Jurassic Market</h1>
+      <p class="gate__subtitle player-info">
+        Игрок: <strong id="menu-player-name">—</strong>
+      </p>
+      <div class="menu-buttons">
+        <button class="btn btn--primary" type="button" id="btn-tutorial">Обучение</button>
+        <button class="btn btn--primary" type="button" id="btn-create-room">Создать комнату</button>
+        <button class="btn btn--secondary" type="button" id="btn-join-room">Присоединиться по коду</button>
+        <button class="btn btn--secondary" type="button" id="btn-offline-hotseat">Офлайн (hot-seat)</button>
+        <button class="btn btn--secondary" type="button" id="btn-logout">Выйти</button>
+      </div>
+      <p class="gate__error" id="menu-error" hidden></p>
+    </div>
+  </div>
+
+  <!-- Модалка ввода кода комнаты (способ A) -->
+  <div class="gate gate--modal" id="join-modal" hidden>
+    <div class="gate__card">
+      <h2 class="gate__title" style="font-size:1.2rem">Присоединиться</h2>
+      <p class="gate__subtitle">Введите код комнаты от хоста</p>
+      <label class="gate__field">
+        <span>Код комнаты</span>
+        <input type="text" id="lobby-join-code" maxlength="8" placeholder="ABC123" autocomplete="off" />
+      </label>
+      <p class="gate__error" id="join-modal-error" hidden></p>
+      <div class="gate__actions">
+        <button class="btn btn--primary" type="button" id="lobby-join-btn">Войти</button>
+        <button class="btn btn--secondary" type="button" id="join-modal-cancel">Отмена</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Лобби комнаты -->
+  <div class="gate" id="lobby-gate" hidden>
+    <div class="gate__card gate__card--wide lobby-container">
+      <div class="lobby__head">
+        <div>
+          <h1 class="gate__title">Комната</h1>
+          <p class="gate__subtitle" id="lobby-user-label"></p>
+        </div>
+        <button class="btn btn--secondary" type="button" id="lobby-back-menu-btn">В меню</button>
+      </div>
+
+      <div class="lobby__room" id="lobby-room">
+        <div class="room-code-row">
+          <span>Код:</span>
+          <strong id="lobby-room-code" class="room-code-value">—</strong>
+          <button class="btn btn--dev-sm" type="button" id="lobby-copy-code-btn">Копировать код</button>
+          <span class="room-players-count" id="room-players-count">0/4</span>
+        </div>
+        <p class="lobby__invite">
+          Ссылка-приглашение:
+          <input type="text" id="lobby-invite-url" readonly />
+          <button class="btn btn--dev-sm" type="button" id="lobby-copy-btn">Копировать ссылку</button>
+        </p>
+        <h2 class="panel__heading">Игроки</h2>
+        <ul class="lobby__players" id="lobby-players"></ul>
+        <p class="gate__error" id="lobby-error" hidden></p>
+        <div class="gate__actions">
+          <button class="btn btn--primary" type="button" id="lobby-start-btn" hidden>Запустить игру</button>
+          <button class="btn btn--secondary" type="button" id="lobby-leave-btn">Покинуть комнату</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app" id="game-app" hidden>
+    <header class="header">
+      <div class="header__brand">
+        <span class="header__logo">🦖</span>
+        <div>
+          <h1 class="header__title">Jurassic Market</h1>
+          <p class="header__subtitle" id="location-subtitle">О. Мальта, Valletta, Чёрный рынок</p>
+        </div>
+      </div>
+      <div class="header__actions">
+        <nav class="location-tabs" id="location-tabs" aria-label="Локации"></nav>
+        <button class="btn btn--dev" id="dev-toggle" type="button" title="Ctrl+Shift+D">Dev</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <aside class="panel panel--left">
+        <section class="panel__section">
+          <h2 class="panel__heading">Игроки</h2>
+          <p class="goal-banner" id="goal-banner">Цель: накопить <strong>$125 000</strong></p>
+          <ul class="players" id="players-list"></ul>
+          <div class="offline-roster" id="offline-roster" hidden>
+            <button class="btn btn--secondary" type="button" id="add-player-btn">
+              Добавить игрока
+            </button>
+            <p class="trade-hint" id="offline-roster-hint">Офлайн: 2–6 игроков</p>
+          </div>
+          <div class="win-banner" id="win-banner" hidden></div>
+        </section>
+
+        <section class="panel__section">
+          <h2 class="panel__heading">Кубик</h2>
+          <div class="dice-area">
+            <div class="dice" id="dice" aria-live="polite">—</div>
+            <button class="btn btn--primary" id="roll-btn" type="button">Бросить кубик</button>
+          </div>
+        </section>
+
+        <section class="panel__section">
+          <button class="btn btn--secondary" id="new-game-btn" type="button">Новая игра</button>
+          <button class="btn btn--secondary" id="exit-tutorial-btn" type="button" hidden>Выйти из обучения</button>
+          <button class="btn btn--secondary" id="back-to-menu-btn" type="button" hidden>В главное меню</button>
+          <p class="session-meta" id="session-meta"></p>
+        </section>
+        <section class="panel__section" id="tutorial-hint-panel" hidden>
+          <h2 class="panel__heading">Подсказка</h2>
+          <p class="tutorial-hint" id="tutorial-hint-text"></p>
+          <button class="btn btn--dev-sm" type="button" id="tutorial-hint-next">Далее</button>
+        </section>
+      </aside>
+
+      <div class="board-container">
+        <div id="board" aria-label="Игровое поле"></div>
+      </div>
+
+      <aside class="panel panel--right">
+        <section class="panel__section">
+          <h2 class="panel__heading">Текущая клетка</h2>
+          <div class="cell-info" id="cell-info">
+            <p class="cell-info__placeholder">Бросьте кубик, чтобы начать</p>
+          </div>
+          <div class="pending-actions" id="pending-actions" hidden>
+            <p class="pending-actions__text" id="pending-actions-text"></p>
+            <div id="pending-buy-controls" class="pending-actions__controls" hidden>
+              <div class="pending-actions__row">
+                <button class="btn btn--primary" id="buy-btn" type="button">Купить</button>
+                <button class="btn btn--secondary" id="buy-dna-btn" type="button" hidden>Купить ДНК</button>
+                <button class="btn btn--secondary" id="decline-action-btn" type="button">Отказаться</button>
+              </div>
+            </div>
+            <div id="pending-buy-dna-controls" class="pending-actions__controls" hidden>
+              <div class="pending-actions__row">
+                <button class="btn btn--primary" id="buy-dna-only-btn" type="button">Купить ДНК</button>
+                <button class="btn btn--secondary" id="decline-dna-btn" type="button">Отказаться</button>
+              </div>
+            </div>
+            <div id="pending-rent-controls" class="pending-actions__controls" hidden>
+              <label class="pending-actions__field" id="rent-dino-field" hidden>
+                <span>Динозавр на покрытие остатка (любая локация)</span>
+                <select id="rent-dino-select"></select>
+              </label>
+              <div class="pending-actions__row">
+                <button class="btn btn--primary" id="rent-pay-btn" type="button">Заплатить штраф</button>
+                <button class="btn btn--secondary" id="rent-dino-btn" type="button" hidden>Отдать динозавра</button>
+              </div>
+            </div>
+            <div id="pending-incubate-controls" class="pending-actions__controls" hidden>
+              <div class="pending-actions__row">
+                <button class="btn btn--primary" id="incubate-btn" type="button">Синтезировать</button>
+                <button class="btn btn--secondary" id="decline-incubate-btn" type="button">Отказаться</button>
+              </div>
+            </div>
+            <div id="pending-sell-controls" class="pending-actions__controls" hidden>
+              <label class="pending-actions__field">
+                <span>Динозавр для продажи</span>
+                <select id="sell-dino-select"></select>
+              </label>
+              <div class="pending-actions__row">
+                <button class="btn btn--primary" id="sell-btn" type="button">Продать</button>
+                <button class="btn btn--secondary" id="decline-sell-btn" type="button">Не продавать</button>
+              </div>
+            </div>
+            <div id="pending-jail-controls" class="pending-actions__controls" hidden>
+              <div class="pending-actions__row">
+                <button class="btn btn--primary" id="jail-pay-btn" type="button">Заплатить $2000</button>
+                <button class="btn btn--secondary" id="jail-wait-btn" type="button">Отсидеть ход</button>
+              </div>
+            </div>
+            <div id="pending-restaurant-controls" class="pending-actions__controls" hidden>
+              <div class="pending-actions__row">
+                <button class="btn btn--primary" id="restaurant-accept-btn" type="button">Согласиться (−20%)</button>
+                <button class="btn btn--secondary" id="restaurant-decline-btn" type="button">Отказаться</button>
+              </div>
+            </div>
+            <div id="pending-training-controls" class="pending-actions__controls" hidden>
+              <label class="pending-actions__field">
+                <span>Динозавр для дрессировки (любая локация)</span>
+                <select id="training-dino-select"></select>
+              </label>
+              <div class="pending-actions__row">
+                <button class="btn btn--primary" id="training-confirm-btn" type="button">Дрессировать</button>
+                <button class="btn btn--secondary" id="training-skip-btn" type="button">Пропустить</button>
+              </div>
+            </div>
+            <div id="pending-experiment-controls" class="pending-actions__controls" hidden>
+              <label class="pending-actions__field">
+                <span>Динозавр для эксперимента (любая локация)</span>
+                <select id="experiment-dino-select"></select>
+              </label>
+              <div class="pending-actions__row">
+                <button class="btn btn--primary" id="experiment-confirm-btn" type="button">Эксперимент</button>
+                <button class="btn btn--secondary" id="experiment-skip-btn" type="button">Отказаться</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel__section">
+          <h2 class="panel__heading">Динозавры и ДНК</h2>
+          <div class="assets" id="assets-list"></div>
+        </section>
+
+        <section class="panel__section">
+          <h2 class="panel__heading">Бой</h2>
+          <p class="trade-hint">После боя: сначала проигравший (реанимация / отдать / бросить), затем победитель может вылечить раненого. Цена хила/реанимации = доля потерянного HP от цены. Либо 2 прохода старта — полное HP бесплатно. Реанимация и хил доступны в любой момент.</p>
+          <div class="battle-panel" id="battle-panel">
+            <label class="pending-actions__field" id="battle-target-field">
+              <span>Соперник</span>
+              <select id="battle-target-select"></select>
+            </label>
+            <div class="pending-actions__row" id="battle-propose-row">
+              <button class="btn btn--primary" id="battle-propose-btn" type="button">Вызвать на бой</button>
+            </div>
+            <div id="battle-active" hidden>
+              <p class="pending-actions__text" id="battle-status-text"></p>
+              <div id="battle-fighters" class="battle-fighters" hidden></div>
+              <label class="pending-actions__field" id="battle-dino-field" hidden>
+                <span>Ваш динозавр для боя</span>
+                <select id="battle-dino-select"></select>
+              </label>
+              <div class="pending-actions__row" id="battle-cancel-row" hidden>
+                <button class="btn btn--secondary" id="battle-cancel-btn" type="button">Отозвать вызов</button>
+              </div>
+              <div class="pending-actions__row" id="battle-accept-row" hidden>
+                <button class="btn btn--primary" id="battle-accept-btn" type="button">Принять бой</button>
+                <button class="btn btn--secondary" id="battle-decline-btn" type="button">Отклонить</button>
+              </div>
+              <div class="pending-actions__row" id="battle-pick-row" hidden>
+                <button class="btn btn--primary" id="battle-pick-btn" type="button">Выбрать динозавра</button>
+              </div>
+              <div class="pending-actions__row" id="battle-choice-row" hidden>
+                <button class="btn btn--primary" id="battle-attack-btn" type="button">Атака</button>
+                <button class="btn btn--secondary" id="battle-shield-btn" type="button">Щит</button>
+              </div>
+              <div class="pending-actions__row" id="battle-aftermath-row" hidden>
+                <button class="btn btn--primary" id="battle-revive-btn" type="button">Реанимировать</button>
+                <button class="btn btn--secondary" id="battle-give-btn" type="button">Отдать победителю</button>
+                <button class="btn btn--secondary" id="battle-abandon-btn" type="button">Лишиться</button>
+              </div>
+              <div class="pending-actions__row" id="battle-winner-heal-row" hidden>
+                <button class="btn btn--primary" id="battle-heal-winner-btn" type="button">Вылечить</button>
+                <button class="btn btn--secondary" id="battle-skip-heal-btn" type="button">Ждать 2 старта</button>
+              </div>
+              <p class="trade-hint" id="battle-wait-hint" hidden></p>
+            </div>
+            <div id="battle-heal-own" class="battle-revive-own" hidden>
+              <label class="pending-actions__field">
+                <span>Вылечить раненого</span>
+                <select id="battle-heal-select"></select>
+              </label>
+              <button class="btn btn--secondary" id="battle-heal-own-btn" type="button">Вылечить</button>
+            </div>
+            <div id="battle-revive-own" class="battle-revive-own" hidden>
+              <label class="pending-actions__field">
+                <span>Реанимировать мёртвого (в любой момент)</span>
+                <select id="battle-revive-select"></select>
+              </label>
+              <button class="btn btn--secondary" id="battle-revive-own-btn" type="button">Реанимировать</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel__section">
+          <h2 class="panel__heading">Обмен</h2>
+          <p class="trade-hint">Обмен динозаврами и ДНК: свой актив ↔ актив другого игрока. ★ ДНК видна только здесь. Нужно согласие. Кубик не блокируется. Лимит ДНК — 3 образца каждого вида.</p>
+          <div class="trade-panel" id="trade-panel">
+            <label class="pending-actions__field">
+              <span>Ваш актив (динозавр или ДНК)</span>
+              <select id="trade-offer-select"></select>
+            </label>
+            <label class="pending-actions__field">
+              <span>Актив другого игрока</span>
+              <select id="trade-request-select"></select>
+            </label>
+            <p class="trade-compare" id="trade-compare"></p>
+            <div class="pending-actions__row" id="trade-propose-row">
+              <button class="btn btn--primary" id="trade-propose-btn" type="button">Предложить обмен</button>
+            </div>
+            <div class="pending-actions__controls" id="trade-pending-controls" hidden>
+              <p class="pending-actions__text" id="trade-pending-text"></p>
+              <div class="pending-actions__row">
+                <button class="btn btn--primary" id="trade-accept-btn" type="button">Принять</button>
+                <button class="btn btn--secondary" id="trade-decline-btn" type="button">Отклонить</button>
+                <button class="btn btn--secondary" id="trade-cancel-btn" type="button">Отозвать</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel__section">
+          <h2 class="panel__heading">Журнал</h2>
+          <ol class="log" id="game-log" reversed></ol>
+        </section>
+      </aside>
+    </main>
+
+    <aside class="dev-panel" id="dev-panel" hidden>
+      <div class="dev-panel__head">
+        <h2 class="dev-panel__title">Режим разработчика</h2>
+        <button class="dev-panel__close" id="dev-close" type="button" aria-label="Закрыть">×</button>
+      </div>
+
+      <p class="dev-panel__hint">Клик по клетке — телепорт. <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> — панель.</p>
+
+      <section class="dev-panel__section">
+        <h3 class="dev-panel__heading">Игрок</h3>
+        <label class="dev-field">
+          <span>Активный</span>
+          <select id="dev-player"></select>
+        </label>
+        <div class="dev-row">
+          <button class="btn btn--dev-sm" id="dev-jail-on" type="button">В тюрьму</button>
+          <button class="btn btn--dev-sm" id="dev-jail-off" type="button">Освободить</button>
+        </div>
+      </section>
+
+      <section class="dev-panel__section">
+        <h3 class="dev-panel__heading">Кубик</h3>
+        <div class="dev-dice-grid" id="dev-dice-grid"></div>
+        <label class="dev-check">
+          <input type="checkbox" id="dev-skip-turn" />
+          Не передавать ход после броска
+        </label>
+        <p class="dev-panel__hint" style="margin-top:0.4rem">В Dev покупка/продажа тоже не передают ход — удобно сразу идти к агенту.</p>
+      </section>
+
+      <section class="dev-panel__section">
+        <h3 class="dev-panel__heading">Клетка</h3>
+        <label class="dev-field">
+          <span>Номер (1–40)</span>
+          <input type="number" id="dev-cell" min="1" max="40" value="1" />
+        </label>
+        <label class="dev-check">
+          <input type="checkbox" id="dev-trigger-effect" checked />
+          Сработать эффект клетки
+        </label>
+        <label class="dev-check">
+          <input type="checkbox" id="dev-pass-go" />
+          Учитывать полный круг (старт + доход с динозавров)
+        </label>
+        <div class="dev-row">
+          <button class="btn btn--dev-sm" id="dev-teleport" type="button">Телепорт</button>
+          <button class="btn btn--dev-sm" id="dev-trigger" type="button">Эффект сейчас</button>
+        </div>
+      </section>
+
+      <section class="dev-panel__section">
+        <h3 class="dev-panel__heading">Деньги</h3>
+        <label class="dev-field">
+          <span>Сумма</span>
+          <input type="number" id="dev-money" value="15000" step="500" />
+        </label>
+        <div class="dev-row">
+          <button class="btn btn--dev-sm" id="dev-money-set" type="button">Задать</button>
+          <button class="btn btn--dev-sm" id="dev-money-plus" type="button">+$1000</button>
+          <button class="btn btn--dev-sm" id="dev-money-minus" type="button">−$1000</button>
+        </div>
+      </section>
+
+      <section class="dev-panel__section">
+        <h3 class="dev-panel__heading">Ход</h3>
+        <label class="dev-check">
+          <input type="checkbox" id="dev-lap-limit" checked />
+          Лимит 2 круга на локации
+        </label>
+        <p class="dev-panel__hint" style="margin-top:0.35rem">Выключено — без блокировки хода и без запрета возврата на карту.</p>
+        <div class="dev-row">
+          <button class="btn btn--dev-sm" id="dev-allow-roll" type="button">Разрешить бросок</button>
+          <button class="btn btn--dev-sm" id="dev-next-turn" type="button">След. игрок</button>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <div class="intro-modal" id="intro-modal" hidden role="dialog" aria-modal="true" aria-labelledby="intro-modal-title">
+    <div class="intro-modal__backdrop" aria-hidden="true"></div>
+    <div class="intro-modal__dialog">
+      <p class="intro-modal__eyebrow">Чёрный рынок · Мальта</p>
+      <h2 class="intro-modal__title" id="intro-modal-title">Soyona Santos</h2>
+      <div class="intro-modal__body">
+        <img
+          class="intro-modal__photo"
+          src="img/soyona-santos.png"
+          alt="Soyona Santos"
+          width="160"
+          height="200"
+        />
+        <div class="intro-modal__text">
+          <blockquote class="intro-modal__quote">
+            <p>To build a strong relationship is the same as to play chess. The queen cannot win alone, no matter how strong he is.</p>
+          </blockquote>
+          <p class="intro-modal__translation">
+            «Построить крепкие отношения — всё равно что играть в шахматы. Ферзь не победит в одиночку, каким бы сильным он ни был.»
+          </p>
+          <p class="intro-modal__goal">
+            Цель игры: первым накопить <strong>$125 000</strong>.
+            Купленных динозавров можно обменивать между игроками с <strong>любой локации</strong>
+            (только купленные; ориентир — привлекательность).
+          </p>
+        </div>
+      </div>
+      <button class="btn btn--primary intro-modal__ok" id="intro-modal-ok" type="button">OK</button>
+    </div>
+  </div>
+
+  <div class="result-modal" id="lap-limit-modal" hidden role="dialog" aria-modal="true" aria-labelledby="lap-limit-modal-title">
+    <div class="result-modal__backdrop" aria-hidden="true"></div>
+    <div class="result-modal__dialog">
+      <p class="result-modal__eyebrow">Лимит локации</p>
+      <h2 class="result-modal__title" id="lap-limit-modal-title">Смените карту</h2>
+      <p class="result-modal__text" id="lap-limit-modal-text">
+        Вы прошли 2 круга на этой локации. Бросок здесь недоступен — перейдите на другую карту.
+        Покупки, обмен и бои по-прежнему можно.
+      </p>
+      <button class="btn btn--primary result-modal__ok" id="lap-limit-modal-ok" type="button">Понятно</button>
+    </div>
+  </div>
+
+  <div class="result-modal" id="experiment-result-modal" hidden role="dialog" aria-modal="true" aria-labelledby="experiment-result-title">
+    <div class="result-modal__backdrop" aria-hidden="true"></div>
+    <div class="result-modal__dialog">
+      <p class="result-modal__eyebrow" id="result-modal-eyebrow">Подземная лаборатория</p>
+      <h2 class="result-modal__title" id="experiment-result-title">Результат эксперимента</h2>
+      <p class="result-modal__outcome" id="experiment-result-outcome"></p>
+      <p class="result-modal__text" id="experiment-result-text"></p>
+      <button class="btn btn--primary result-modal__ok" id="experiment-result-ok" type="button">Понятно</button>
+    </div>
+  </div>
+
+  <div class="purchase-modal" id="purchase-modal" hidden role="dialog" aria-modal="true" aria-labelledby="purchase-modal-title">
+    <div class="purchase-modal__backdrop" aria-hidden="true"></div>
+    <div class="purchase-modal__dialog">
+      <p class="purchase-modal__eyebrow" id="purchase-modal-eyebrow">Покупка</p>
+      <div class="purchase-modal__stage">
+        <img class="purchase-modal__dino" id="purchase-modal-img" alt="" hidden />
+        <div class="purchase-modal__placeholder" id="purchase-modal-placeholder" hidden>🦖</div>
+      </div>
+      <h2 class="purchase-modal__title" id="purchase-modal-title">Динозавр</h2>
+      <ul class="purchase-modal__stats" id="purchase-modal-stats"></ul>
+      <button class="btn btn--primary purchase-modal__ok" id="purchase-modal-ok" type="button">Отлично</button>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/data/locations.js"></script>
+  <script src="js/data/dino-portraits.js"></script>
+  <script src="js/board.js"></script>
+  <script src="js/game.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/net.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

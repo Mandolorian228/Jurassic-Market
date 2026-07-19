@@ -1,0 +1,369 @@
+/* Board theme variables — overridden per location via JS */
+.board {
+  --board-bg: #0d2818;
+  --board-border: #1b4332;
+  --center-bg: linear-gradient(135deg, #1b4332 0%, #081c15 50%, #1b4332 100%);
+  --cell-empty: linear-gradient(180deg, #2d6a4f 0%, #1b4332 100%);
+  --cell-property: linear-gradient(180deg, #40916c 0%, #2d6a4f 100%);
+  --cell-danger: linear-gradient(180deg, #9b2226 0%, #660708 100%);
+  --cell-bonus: linear-gradient(180deg, #ee9b00 0%, #ca6702 100%);
+  --cell-start: linear-gradient(180deg, #52b788 0%, #2d6a4f 100%);
+  --cell-character: linear-gradient(180deg, #5a189a 0%, #3c096c 100%);
+  --accent: #95d5b2;
+  --board-text: #d8f3dc;
+  --water: #0077b6;
+
+  display: grid;
+  /* По умолчанию 40 клеток (9×9); для других размеров задаётся из board.js */
+  grid-template-columns: var(--corner-size) repeat(9, 1fr) var(--corner-size);
+  grid-template-rows: var(--corner-size) repeat(9, 1fr) var(--corner-size);
+  width: min(92vw, 720px);
+  aspect-ratio: 1;
+  background: var(--board-bg);
+  border: 4px solid var(--board-border);
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.5),
+    0 16px 48px rgba(0, 0, 0, 0.6),
+    inset 0 0 60px rgba(0, 0, 0, 0.3);
+  padding: 3px;
+  gap: 2px;
+  position: relative;
+}
+
+:root {
+  --corner-size: 72px;
+}
+
+@media (min-width: 900px) {
+  :root { --corner-size: 84px; }
+  .board { width: min(85vw, 820px); }
+}
+
+.board__corner--tl { grid-area: 1 / 1 / 2 / 2; }
+.board__top        { grid-area: 1 / 2 / 2 / 11; }
+.board__corner--tr { grid-area: 1 / 11 / 2 / 12; }
+.board__left       { grid-area: 2 / 1 / 11 / 2; }
+.board__center     { grid-area: 2 / 2 / 11 / 11; }
+.board__right      { grid-area: 2 / 11 / 11 / 12; }
+.board__corner--bl { grid-area: 11 / 1 / 12 / 2; }
+.board__bottom     { grid-area: 11 / 2 / 12 / 11; }
+.board__corner--br { grid-area: 11 / 11 / 12 / 12; }
+
+.board__top,
+.board__bottom {
+  display: flex;
+  gap: 2px;
+}
+
+.board__left,
+.board__right {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.board__bottom {
+  flex-direction: row-reverse;
+}
+
+.board__left {
+  flex-direction: column-reverse;
+}
+
+.cell {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--cell-empty);
+  color: var(--board-text);
+  font-size: clamp(0.45rem, 1.2vw, 0.62rem);
+  text-align: center;
+  line-height: 1.15;
+  overflow: hidden;
+  cursor: default;
+  transition: box-shadow 0.2s, transform 0.15s;
+}
+
+.cell:hover {
+  z-index: 2;
+  transform: scale(1.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.cell--start    { background: var(--cell-start); }
+.cell--property { background: var(--cell-property); }
+.cell--money    { background: var(--cell-bonus); }
+.cell--character{ background: var(--cell-character); }
+.cell--event    { background: var(--cell-danger); }
+.cell--corner   { background: var(--cell-danger); }
+
+.cell--arena {
+  background: linear-gradient(160deg, #6b3a1a 0%, #3a1f10 55%, #2a140c 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 180, 80, 0.35);
+}
+
+.cell--arena .cell__label {
+  color: #ffd59a;
+}
+
+.cell--broker {
+  background: linear-gradient(180deg, #c9a227 0%, #8a6a12 100%);
+}
+
+.cell--highlight {
+  box-shadow:
+    0 0 0 2px #ffd60a,
+    0 0 16px rgba(255, 214, 10, 0.6);
+  z-index: 3;
+  animation: pulse-cell 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-cell {
+  0%, 100% { box-shadow: 0 0 0 2px #ffd60a, 0 0 12px rgba(255, 214, 10, 0.5); }
+  50% { box-shadow: 0 0 0 3px #ffd60a, 0 0 20px rgba(255, 214, 10, 0.8); }
+}
+
+.cell__label {
+  font-weight: 700;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+.cell__sublabel,
+.cell__price {
+  font-size: 0.85em;
+  opacity: 0.85;
+}
+
+.cell__price {
+  color: #ffd60a;
+  font-weight: 700;
+}
+
+.cell__income {
+  font-size: 0.75em;
+  color: #95d5b2;
+  opacity: 0.9;
+}
+
+.cell--owned {
+  --owner-color: #888;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--owner-color) 78%, #1a1a1a) 0%,
+    color-mix(in srgb, var(--owner-color) 48%, #0a0a0a) 100%
+  ) !important;
+  box-shadow:
+    inset 0 0 0 2px var(--owner-color),
+    inset 0 0 12px color-mix(in srgb, var(--owner-color) 35%, transparent);
+}
+
+.cell--owned .cell__label,
+.cell--owned .cell__price,
+.cell--owned .cell__income {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
+}
+
+.cell__icon {
+  font-size: 1.1em;
+  margin-bottom: 1px;
+}
+
+.board__corner .cell {
+  width: 100%;
+  height: 100%;
+  font-size: clamp(0.5rem, 1.4vw, 0.68rem);
+}
+
+.cell__tokens {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 100%;
+  z-index: 2;
+}
+
+.cell__token {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+.board__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  background: var(--center-bg);
+  border-radius: 4px;
+  border: 1px solid rgba(149, 213, 178, 0.15);
+  overflow: hidden;
+  position: relative;
+}
+
+.board__center::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 40%, rgba(0, 119, 182, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 70% 60%, rgba(0, 119, 182, 0.1) 0%, transparent 35%);
+  pointer-events: none;
+}
+
+.center__header {
+  text-align: center;
+  z-index: 1;
+}
+
+.center__title {
+  margin: 0;
+  font-family: 'Russo One', sans-serif;
+  font-size: clamp(0.85rem, 2.5vw, 1.15rem);
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+.board__center--text {
+  padding: 1rem;
+}
+
+.board__center--text .center__title {
+  font-size: clamp(1.05rem, 3.4vw, 1.55rem);
+  max-width: 11em;
+  line-height: 1.25;
+}
+
+.center__subtitle {
+  margin: 2px 0 0;
+  font-size: clamp(0.55rem, 1.5vw, 0.72rem);
+  color: rgba(216, 243, 220, 0.65);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.center__map {
+  position: relative;
+  width: 70%;
+  max-width: 200px;
+  aspect-ratio: 1.6;
+  z-index: 1;
+}
+
+.center__photo {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.35);
+}
+
+.board__center--photo {
+  gap: 4px;
+  padding: 6px;
+}
+
+.board__center--photo .center__header {
+  flex-shrink: 0;
+}
+
+.board__center--photo .center__map {
+  width: 77%;
+  max-width: 576px;
+  flex: 0 1 auto;
+  min-height: 0;
+  aspect-ratio: 1.35;
+  height: auto;
+  max-height: 77%;
+}
+
+.center__island {
+  position: absolute;
+  background: rgba(45, 106, 79, 0.7);
+  border: 1px solid rgba(149, 213, 178, 0.3);
+  border-radius: 40% 60% 50% 50% / 50% 40% 60% 50%;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.center__island--main {
+  width: 65%;
+  height: 55%;
+  top: 25%;
+  left: 25%;
+}
+
+.center__island--small {
+  width: 28%;
+  height: 30%;
+  top: 15%;
+  left: 8%;
+  border-radius: 50% 40% 60% 50%;
+}
+
+.center__water {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 119, 182, 0.2);
+  border-radius: 8px;
+  border: 1px dashed rgba(0, 180, 216, 0.2);
+}
+
+.center__map-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Russo One', sans-serif;
+  font-size: clamp(0.5rem, 1.4vw, 0.7rem);
+  color: var(--accent);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  white-space: nowrap;
+}
+
+.board-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.board__location-name {
+  position: static;
+  transform: none;
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.75rem;
+  color: var(--accent);
+  white-space: nowrap;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  text-align: center;
+}
+
+.board-container {
+  position: relative;
+}
